@@ -15,14 +15,10 @@ import java.util.regex.Pattern;
 
 public class Main {
 
-    static Pattern pattern = Pattern.compile("^(\\w+),(\\d+),(\\d{2}-\\d{2}-\\d{4})$");
-    static int NAME_COLUMN = 1;
-    static int SALARY_COLUMN = 2;
-    static int SALARY_DATE_COLUMN = 3;
 
     public static void main(String[] args) throws IOException {
-        if (args.length != 1) {
-            System.err.println("No path to file was found! Usage: java Main <file>");
+        if (args.length != 2) {
+            System.err.println("No path to file was found! Usage: java Main <file> <type>");
             System.exit(1);
         }
         File file = new File(args[0]);
@@ -31,27 +27,21 @@ public class Main {
             System.exit(1);
         }
 
-        Path filePath = file.toPath();
-        List<String> allLines = Files.readAllLines(filePath);
-        List<SalaryRecord> resultRecords = new ArrayList<>();
+        SalaryParser salaryRecordParser = new TextSalaryParser();
 
-        for (String line : allLines) {
-            Matcher matcher = pattern.matcher(line);
-            try {
-                if (matcher.matches()) {
-                    String name = matcher.group(NAME_COLUMN);
-                    int salary = Integer.parseInt(matcher.group(SALARY_COLUMN));
-
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-                    LocalDate localDate = LocalDate.parse(matcher.group(SALARY_DATE_COLUMN), formatter);
-                    resultRecords.add(new SalaryRecord(name, salary, localDate));
-                }
-            } catch (Exception e) {
-                System.err.println("Error while parsing line " + line);
-            }
+        if (args[1].equals("XML")) {
+            salaryRecordParser = new XmlSalaryParser();
+        } else if (args[1].equals("TXT")) {
+            salaryRecordParser = new TextSalaryParser();
+        } else {
+            System.err.println("Not supported type, available types are XML, TXT");
+            System.exit(1);
         }
-        System.out.println("Total salary records: " + resultRecords.size());
-        printAnalytics(resultRecords);
+
+        List<SalaryRecord> salaryRecords = salaryRecordParser.parse(Path.of(file.toURI()));
+
+        System.out.println("Total salary records: " + salaryRecords.size());
+        printAnalytics(salaryRecords);
     }
 
     private static void printAnalytics(List<SalaryRecord> records) {
